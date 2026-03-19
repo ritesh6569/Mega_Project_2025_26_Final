@@ -1,0 +1,18 @@
+/* Auth page specific layouts (most handled by index.css global classes) */
+.auth-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 0.9rem;
+}
+
+.auth-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 0.9rem;
+}

@@ -1,0 +1,14 @@
+flask
+flask-cors
+opencv-python
+numpy
+scikit-image
+scikit-learn
+tensorflow
+werkzeug
+requests
+pymupdf
+easyocr
+torch
+torchvision
+flask-sqlalchemy

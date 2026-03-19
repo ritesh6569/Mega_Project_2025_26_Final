@@ -1,0 +1,21 @@
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Dependencies and Build
+node_modules/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+
+# Secrets and Databases
+.env
+*.db
+instance/
+uploads/
