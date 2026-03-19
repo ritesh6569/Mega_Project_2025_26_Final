@@ -6,5 +6,7 @@ venv/
 ENV/
 instance/
 uploads/
+blockchain.json
+data/
 .env
 *.db

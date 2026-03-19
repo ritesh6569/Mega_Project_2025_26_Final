@@ -10,9 +10,13 @@ from werkzeug.utils import secure_filename
 from core.preprocessor import preprocess_image
 from core.feature_extractor import get_extracted_features
 from core.verifier import verify_document
+from core.blockchain import Blockchain
 
 app = Flask(__name__)
 CORS(app)
+
+# Initialize Blockchain
+blockchain = Blockchain()
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -52,8 +56,25 @@ def verify():
         # Verification
         v_res = verify_document(features)
         
-        # Final combined report
-        final_report = {**features, **v_res}
+        # Blockchain Integration
+        blockchain_record = {
+            "file": filename,
+            "text": features.get('extracted_text', ''),
+            "status": v_res.get('verified', False)
+        }
+        new_block = blockchain.add_block(blockchain_record)
+        
+        # Prepare final report
+        final_report = {
+            **features,
+            **v_res,
+            "blockchain_proof": {
+                "block_index": new_block.index,
+                "block_hash": new_block.hash,
+                "timestamp": new_block.timestamp,
+                "is_valid": blockchain.is_chain_valid()
+            }
+        }
 
         return jsonify({
             "status": "success",
