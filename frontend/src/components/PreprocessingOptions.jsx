@@ -1,13 +1,54 @@
 import React, { useState } from 'react';
-import { Settings, Check, Zap, Image as ImageIcon, Sparkles, Filter, Scissors } from 'lucide-react';
+import { Settings, Check, Zap, Image as ImageIcon, Sparkles, Filter, Scissors, RotateCcw } from 'lucide-react';
 import './PreprocessingOptions.css';
 
-const techniquesList = [
-  { id: 'resizing', name: 'Smart Resizing', desc: 'Standardizes dimensions for consistent feature extraction.', icon: <Scissors size={20} /> },
-  { id: 'grayscale', name: 'Grayscale Conversion', desc: 'Removes color noise to focus on structural patterns.', icon: <ImageIcon size={20} /> },
-  { id: 'noise_removal', name: 'Gaussian Noise Filter', desc: 'Smooths the image to eliminate digital artifacts.', icon: <Zap size={20} /> },
-  { id: 'equalization', name: 'Histogram Equalization', desc: 'Optimizes contrast for better edge detection.', icon: <Sparkles size={20} /> },
-  { id: 'edge_detection', name: 'Canny Edge Detection', desc: 'Highlights document borders and text outlines.', icon: <Filter size={20} /> },
+const categories = [
+  {
+    name: 'Basic & Color',
+    techniques: [
+      { id: 'resizing', name: 'Smart Resizing', desc: 'Standardizes document dimensions.', icon: <Scissors size={18} /> },
+      { id: 'grayscale', name: 'Grayscale', desc: 'Removes color noise.', icon: <ImageIcon size={18} /> },
+      { id: 'hsv', name: 'HSV Space', desc: 'Hue/Saturation/Value conversion.', icon: <Sparkles size={18} /> },
+      { id: 'lab', name: 'LAB Space', desc: 'Perceptual color space.', icon: <Sparkles size={18} /> },
+    ]
+  },
+  {
+    name: 'Enhancement',
+    techniques: [
+      { id: 'equalization', name: 'Histogram Eq', desc: 'Global contrast boost.', icon: <Zap size={18} /> },
+      { id: 'clahe', name: 'CLAHE', desc: 'Adaptive contrast enhancement.', icon: <Sparkles size={18} /> },
+      { id: 'normalization', name: 'Normalization', desc: 'Scales pixel intensities.', icon: <Zap size={18} /> },
+    ]
+  },
+  {
+    name: 'Filters & Smoothing',
+    techniques: [
+      { id: 'gaussian_blur', name: 'Gaussian Blur', desc: 'Standard noise reduction.', icon: <Filter size={18} /> },
+      { id: 'median_blur', name: 'Median Filter', desc: 'Best for salt-and-pepper noise.', icon: <Filter size={18} /> },
+      { id: 'bilateral_filter', name: 'Bilateral', desc: 'Edge-preserving smoothing.', icon: <Filter size={18} /> },
+      { id: 'sharpening', name: 'Sharpening', desc: 'Enhances fine details.', icon: <Sparkles size={18} /> },
+    ]
+  },
+  {
+    name: 'Segmentation & Edges',
+    techniques: [
+      { id: 'thresholding', name: 'Thresholding', desc: 'Basic binary conversion.', icon: <Filter size={18} /> },
+      { id: 'otsu', name: 'Otsu Binarization', desc: 'Automatic optimal threshold.', icon: <Filter size={18} /> },
+      { id: 'adaptive_thresholding', name: 'Adaptive Thresh', desc: 'Best for uneven lighting.', icon: <Filter size={18} /> },
+      { id: 'edge_detection', name: 'Canny Edges', desc: 'Highlights structural borders.', icon: <Filter size={18} /> },
+    ]
+  },
+  {
+    name: 'Morphology & Geometry',
+    techniques: [
+      { id: 'erosion', name: 'Erosion', desc: 'Shrinks foreground objects.', icon: <Scissors size={18} /> },
+      { id: 'dilation', name: 'Dilation', desc: 'Expands foreground objects.', icon: <Sparkles size={18} /> },
+      { id: 'opening', name: 'Opening', desc: 'Erosion then Dilation.', icon: <Scissors size={18} /> },
+      { id: 'closing', name: 'Closing', desc: 'Dilation then Erosion.', icon: <Sparkles size={18} /> },
+      { id: 'rotation', name: 'Auto-Rotation', desc: 'Corrects document orientation.', icon: <RotateCcw size={18} /> },
+      { id: 'padding', name: 'Padding', desc: 'Adds protective borders.', icon: <ImageIcon size={18} /> },
+    ]
+  }
 ];
 
 const PreprocessingOptions = ({ onNext, onBack }) => {
@@ -27,20 +68,27 @@ const PreprocessingOptions = ({ onNext, onBack }) => {
         <p>Select the enhancement techniques to apply before AI verification.</p>
       </div>
 
-      <div className="techniques-grid">
-        {techniquesList.map(tech => (
-          <div 
-            key={tech.id} 
-            className={`tech-card ${selected.includes(tech.id) ? 'selected' : ''}`}
-            onClick={() => toggleTechnique(tech.id)}
-          >
-            <div className="tech-icon-wrapper">{tech.icon}</div>
-            <div className="tech-info">
-              <h3>{tech.name}</h3>
-              <p>{tech.desc}</p>
-            </div>
-            <div className="checkbox">
-              {selected.includes(tech.id) && <Check size={16} />}
+      <div className="categories-stack">
+        {categories.map(cat => (
+          <div key={cat.name} className="category-group">
+            <h3>{cat.name}</h3>
+            <div className="techniques-grid">
+              {cat.techniques.map(tech => (
+                <div 
+                  key={tech.id} 
+                  className={`tech-card ${selected.includes(tech.id) ? 'selected' : ''}`}
+                  onClick={() => toggleTechnique(tech.id)}
+                >
+                  <div className="tech-icon-wrapper">{tech.icon}</div>
+                  <div className="tech-info">
+                    <h4>{tech.name}</h4>
+                    <p>{tech.desc}</p>
+                  </div>
+                  <div className="checkbox">
+                    {selected.includes(tech.id) && <Check size={14} />}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
