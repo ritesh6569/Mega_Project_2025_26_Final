@@ -174,6 +174,8 @@ def verify():
             best_text_sim = 0.0
             best_sift_sim = 0.0
             best_image_sim = 0.0
+            best_tampered_quadrants = []
+            best_tamper_boxes = []
             
             current_text = features.get('extracted_text', '')
             curr_sift = features.get('sift_keypoints', 0)
@@ -238,6 +240,7 @@ def verify():
                     admin_spatial = block.data.get('spatial_hashes', [])
                     curr_spatial = features.get('spatial_hashes', [])
                     
+                    tamper_boxes = []
                     tampered_quadrants = []
                     image_sim = 1.0
                     
@@ -245,12 +248,48 @@ def verify():
                         admin_img = cv2.imread(admin_filepath)
                         uploaded_img = cv2.imread(filepath)
                         if admin_img is not None and uploaded_img is not None:
-                            admin_img_resized = cv2.resize(admin_img, (uploaded_img.shape[1], uploaded_img.shape[0]))
-                            diff = cv2.absdiff(admin_img_resized, uploaded_img)
+                            try:
+                                # Feature-based alignment (Registration)
+                                orb = cv2.ORB_create(1000)
+                                kp1, des1 = orb.detectAndCompute(admin_img, None)
+                                kp2, des2 = orb.detectAndCompute(uploaded_img, None)
+                                
+                                if des1 is not None and des2 is not None:
+                                    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+                                    matches = bf.match(des1, des2)
+                                    matches = sorted(matches, key=lambda x: x.distance)
+                                    good_matches = matches[:50]
+                                    
+                                    if len(good_matches) > 10:
+                                        src_pts = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+                                        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+                                        
+                                        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                                        admin_aligned = cv2.warpPerspective(admin_img, M, (uploaded_img.shape[1], uploaded_img.shape[0]))
+                                    else:
+                                        admin_aligned = cv2.resize(admin_img, (uploaded_img.shape[1], uploaded_img.shape[0]))
+                                else:
+                                    admin_aligned = cv2.resize(admin_img, (uploaded_img.shape[1], uploaded_img.shape[0]))
+                            except:
+                                admin_aligned = cv2.resize(admin_img, (uploaded_img.shape[1], uploaded_img.shape[0]))
+
+                            diff = cv2.absdiff(admin_aligned, uploaded_img)
                             gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-                            _, thresh_diff = cv2.threshold(gray_diff, 20, 255, cv2.THRESH_BINARY)
+                            _, thresh_diff = cv2.threshold(gray_diff, 30, 255, cv2.THRESH_BINARY)
+                            
+                            # Clean up misalignment noise/anti-aliasing using morphological opening
+                            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+                            thresh_diff = cv2.morphologyEx(thresh_diff, cv2.MORPH_OPEN, kernel)
+                            
                             diff_percentage = (np.sum(thresh_diff > 0) / thresh_diff.size)
                             
+                            # Precision detection using contours
+                            contours, _ = cv2.findContours(thresh_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                            for cnt in contours:
+                                if cv2.contourArea(cnt) > 4: # Lower threshold since we used MORPH_OPEN
+                                    x, y, w, h = cv2.boundingRect(cnt)
+                                    tamper_boxes.append([int(x), int(y), int(w), int(h)])
+
                             h_diff, w_diff = thresh_diff.shape
                             grid_size = 8
                             dh_cell = h_diff // grid_size
@@ -297,6 +336,7 @@ def verify():
                         best_sift_sim = sift_sim
                         best_image_sim = image_sim
                         best_tampered_quadrants = tampered_quadrants
+                        best_tamper_boxes = tamper_boxes
             
             is_verified = best_score >= 0.65
             
@@ -304,11 +344,12 @@ def verify():
             if not is_verified:
                 tamper_analysis = {
                     "algorithms_used": feature_techniques + ["OCR Similarity Matching", "Perceptual Image Hashing", "Blockchain Verification"],
-                    "best_text_match": round(best_text_sim * 100, 2),
-                    "best_structure_match": round(best_sift_sim * 100, 2),
-                    "visual_similarity": round(best_image_sim * 100, 2),
+                    "best_text_match": round(float(best_text_sim) * 100, 2),
+                    "best_structure_match": round(float(best_sift_sim) * 100, 2),
+                    "visual_similarity": round(float(best_image_sim) * 100, 2),
                     "tampered_parts": [],
                     "tampered_quadrants": locals().get('best_tampered_quadrants', []),
+                    "tamper_boxes": locals().get('best_tamper_boxes', []),
                     "failure_reasons": []
                 }
                 
@@ -333,8 +374,8 @@ def verify():
             final_report = {
                 **features,
                 "verified": is_verified,
-                "similarity_score": round(best_score, 3),
-                "confidence_percentage": round(best_score * 100, 2),
+                "similarity_score": round(float(best_score), 3),
+                "confidence_percentage": round(float(best_score) * 100, 2),
                 "blockchain_proof": None,
                 "ipfs_hash": ipfs_hash,
                 "tamper_analysis": tamper_analysis
@@ -354,9 +395,19 @@ def verify():
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = max(0.5, w * 0.001)
 
-            quadrants = final_report.get('tamper_analysis', {}).get('tampered_quadrants', [])
+            tamper_data = final_report.get('tamper_analysis') or {}
+            boxes = tamper_data.get('tamper_boxes', [])
+            quadrants = tamper_data.get('tampered_quadrants', [])
             
-            if quadrants:
+            if boxes:
+                for (x, y, w_box, h_box) in boxes:
+                    start_point = (x, y)
+                    end_point = (x + w_box, y + h_box)
+                    cv2.rectangle(final_img, start_point, end_point, color, thickness + 1)
+                    # For small boxes, don't overlap text too much
+                    if w_box > 50:
+                        cv2.putText(final_img, 'TAMPERED', (x + 5, y + 15), font, font_scale * 0.5, color, 1)
+            elif quadrants:
                 num_hashes = len(features.get('spatial_hashes', []))
                 grid_dim = int(np.sqrt(num_hashes)) if num_hashes > 0 else 4
                 
