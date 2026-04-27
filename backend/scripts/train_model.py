@@ -69,9 +69,5 @@ def train_model(data_dir, model_save_path, epochs=10, batch_size=32):
     print(f"Model weights saved to {model_save_path}")
 
 if __name__ == "__main__":
-    # Example usage
-    # data_path = "path/to/your/dataset"
-    # output_weights = "backend/models/custom_vgg_weights.h5"
-    # train_model(data_path, output_weights)
     print("To train the model, ensure you have a dataset directory and run:")
     print("python -m backend.scripts.train_model")
